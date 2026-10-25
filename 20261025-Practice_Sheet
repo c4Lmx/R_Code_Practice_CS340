@@ -1,0 +1,153 @@
+# ==================================================
+# 1. GENERATE TWO RANDOM DATASETS
+# ==================================================
+
+set.seed(42)  # Reproducible random results
+
+# Dataset 1: 100 random integers from 1 to 1000
+dataset_1 <- sample(1:1000, size = 100, replace = TRUE)
+
+# Exclude every unique value found in Dataset 1
+available_numbers <- setdiff(1:1000, unique(dataset_1))
+
+# Dataset 2: 100 integers with no overlap with Dataset 1
+dataset_2 <- sample(
+  available_numbers,
+  size = 100,
+  replace = FALSE
+)
+
+# ==================================================
+# 2. SORT BOTH DATASETS
+# ==================================================
+
+sorted_1 <- sort(dataset_1)
+sorted_2 <- sort(dataset_2)
+
+# ==================================================
+# 3. DEFINE HELPER FUNCTIONS
+# ==================================================
+
+# Returns all modes, or NA if every value appears only once
+calculate_mode <- function(x) {
+  frequencies <- table(x)
+  if (max(frequencies) == 1) return(NA_real_)
+  modes <- frequencies[frequencies == max(frequencies)]
+  as.numeric(names(modes))
+}
+
+# Builds a one-row summary of descriptive statistics
+summarize_data <- function(x, dataset_name) {
+  mode_values <- calculate_mode(x)
+  mode_text <- if (all(is.na(mode_values))) {
+    "No mode"
+  } else {
+    paste(mode_values, collapse = ", ")
+  }
+
+  data.frame(
+    Dataset = dataset_name,
+    Mean = mean(x),
+    Median = median(x),
+    Mode = mode_text,
+    Minimum = min(x),
+    Maximum = max(x),
+    Unique_Values = length(unique(x))
+  )
+}
+
+# Proportion of values falling into each bin
+bin_probability <- function(x, breaks, labels) {
+  as.numeric(table(cut(x, breaks = breaks, labels = labels))) / length(x)
+}
+
+# ==================================================
+# 4. CALCULATE DESCRIPTIVE STATISTICS
+# ==================================================
+
+results <- rbind(
+  summarize_data(dataset_1, "Dataset 1"),
+  summarize_data(dataset_2, "Dataset 2")
+)
+
+# ==================================================
+# 5. BUILD THE BINNED PROBABILITY TABLE
+# ==================================================
+
+bins        <- seq(0, 1000, by = 100)
+bin_labels  <- paste0(bins[-length(bins)] + 1, "-", bins[-1])
+
+binned <- data.frame(
+  Range     = bin_labels,
+  Dataset_1 = bin_probability(dataset_1, bins, bin_labels),
+  Dataset_2 = bin_probability(dataset_2, bins, bin_labels)
+)
+
+# ==================================================
+# 6. DISPLAY THE SORTED DATASETS
+# ==================================================
+
+cat("========== SORTED DATASET 1 ==========\n")
+print(sorted_1)
+
+cat("\n========== SORTED DATASET 2 ==========\n")
+print(sorted_2)
+
+# ==================================================
+# 7. DISPLAY THE STATISTICAL COMPARISON
+# ==================================================
+
+cat("\n========== DESCRIPTIVE STATISTICS ==========\n")
+print(results, row.names = FALSE)
+
+cat("\n========== BINNED PROBABILITY TABLE ==========\n")
+print(binned, row.names = FALSE)
+
+cat("\nColumn sums (should both be 1):",
+    sum(binned$Dataset_1), sum(binned$Dataset_2), "\n")
+
+# ==================================================
+# 8. VERIFY THAT THE DATASETS DO NOT OVERLAP
+# ==================================================
+
+overlap <- intersect(dataset_1, dataset_2)
+
+cat("\n========== OVERLAP VERIFICATION ==========\n")
+cat("Shared values:", length(overlap), "\n")
+cat("No overlap:", length(overlap) == 0, "\n")
+
+# ==================================================
+# 9. CALCULATE DIFFERENCES BETWEEN DATASETS
+# ==================================================
+
+cat("\n========== STATISTICAL DIFFERENCES ==========\n")
+
+cat(
+  "Mean difference (Dataset 2 - Dataset 1):",
+  mean(dataset_2) - mean(dataset_1), "\n"
+)
+
+cat(
+  "Median difference (Dataset 2 - Dataset 1):",
+  median(dataset_2) - median(dataset_1), "\n"
+)
+
+cat(
+  "Range difference (Dataset 2 - Dataset 1):",
+  diff(range(dataset_2)) - diff(range(dataset_1)), "\n"
+)
+
+# ==================================================
+# 10. PLOT THE BINNED PROBABILITIES
+# ==================================================
+
+barplot(
+  t(as.matrix(binned[, c("Dataset_1", "Dataset_2")])),
+  beside = TRUE,
+  names.arg = bin_labels,
+  legend.text = c("Dataset 1", "Dataset 2"),
+  args.legend = list(x = "topright"),
+  las = 2,
+  ylab = "Probability",
+  main = "Binned Probability Distribution"
+)
